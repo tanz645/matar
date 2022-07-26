@@ -2,21 +2,20 @@ package controllers
 
 import (
 	"context"
-	"matar/clients"
 	"matar/common/responses"
 	"matar/models"
+	"matar/services/userService"
+
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 var validate = validator.New()
 
 func CreateUser() gin.HandlerFunc {
-	var userCollection *mongo.Collection = clients.GetMongoCollection(clients.GetConnectedMongoClient(), models.UserCollectionName)
 
 	return func(c *gin.Context) {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -35,14 +34,7 @@ func CreateUser() gin.HandlerFunc {
 			return
 		}
 
-		newUser := models.User{
-			// Id:    primitive.NewObjectID(),
-			Name:  user.Name,
-			Phone: user.Phone,
-			Email: user.Email,
-		}
-
-		result, err := userCollection.InsertOne(ctx, newUser)
+		result, err := userService.CreateUser(ctx, user)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, responses.FailedResponse{Status: http.StatusInternalServerError, Error: true, Message: "User can not be created", Data: err.Error()})
 			return

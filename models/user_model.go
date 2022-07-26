@@ -12,9 +12,10 @@ import (
 var UserCollectionName = "users"
 
 type User struct {
-	Name  string `json:"name,omitempty" validate:"required"`
-	Phone string `json:"phone,omitempty" validate:"required"`
-	Email string `json:"email"`
+	Name    string `json:"name,omitempty" validate:"required"`
+	Phone   string `json:"phone,omitempty" validate:"required"`
+	Email   string `json:"email"`
+	Company string `json:"Company"`
 }
 
 func CreateUserIndexes(client *mongo.Client) {
