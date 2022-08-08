@@ -1,6 +1,6 @@
 # MATAR
 
-This service handles all the user related requestes, part of the microservice network for mooviro
+Core backend services for mooviro
 ## Installation
 
 Install go in you local

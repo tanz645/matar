@@ -3,7 +3,8 @@ package main
 import (
 	"matar/clients"
 	"matar/configs"
-	"matar/models"
+	"matar/models/automobileAdModel"
+	"matar/models/userModel"
 	"matar/routes"
 
 	"github.com/gin-gonic/gin"
@@ -12,7 +13,8 @@ import (
 func main() {
 	router := gin.Default()
 	client := clients.ConnectToMongoDB()
-	models.CreateUserIndexes(client)
+	userModel.CreateUserIndexes(client)
+	automobileAdModel.CreateAutomobileAdIndexes(client)
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"data": "ok",

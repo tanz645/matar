@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"matar/clients"
 	"matar/configs"
-	"matar/models"
+	"matar/models/userModel"
 	"matar/utils"
 	"time"
 
@@ -16,14 +16,9 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type Claims struct {
-	Id primitive.ObjectID `json:"id"`
-	jwt.StandardClaims
-}
-
-func GetUserByPhone(ctx context.Context, phone string) (*models.User, error) {
-	var user models.User
-	var userCollection *mongo.Collection = clients.GetMongoCollection(clients.GetConnectedMongoClient(), models.UserCollectionName)
+func GetUserByPhone(ctx context.Context, phone string) (*userModel.User, error) {
+	var user userModel.User
+	var userCollection *mongo.Collection = clients.GetMongoCollection(clients.GetConnectedMongoClient(), userModel.UserCollectionName)
 	err := userCollection.FindOne(ctx, bson.M{"phone": phone}).Decode(&user)
 	if err != nil {
 		fmt.Println(err)
@@ -32,8 +27,23 @@ func GetUserByPhone(ctx context.Context, phone string) (*models.User, error) {
 	return &user, nil
 }
 
-func CreateUser(ctx context.Context, user models.User) (*mongo.InsertOneResult, error) {
-	var userCollection *mongo.Collection = clients.GetMongoCollection(clients.GetConnectedMongoClient(), models.UserCollectionName)
+func GetUserById(ctx context.Context, id string) (*userModel.User, error) {
+	var user userModel.User
+	var userCollection *mongo.Collection = clients.GetMongoCollection(clients.GetConnectedMongoClient(), userModel.UserCollectionName)
+	objId, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return nil, errors.New("Can not get user")
+	}
+	err = userCollection.FindOne(ctx, bson.M{"_id": objId}).Decode(&user)
+	if err != nil {
+		fmt.Println(err)
+		return nil, errors.New("Can not get user")
+	}
+	return &user, nil
+}
+
+func CreateUser(ctx context.Context, user userModel.User) (*mongo.InsertOneResult, error) {
+	var userCollection *mongo.Collection = clients.GetMongoCollection(clients.GetConnectedMongoClient(), userModel.UserCollectionName)
 	userByPhone, _ := GetUserByPhone(ctx, user.Phone)
 	if userByPhone != nil && userByPhone.PhoneNumberVerified == true {
 		return nil, errors.New("Phone number already verified, please login using it")
@@ -42,7 +52,7 @@ func CreateUser(ctx context.Context, user models.User) (*mongo.InsertOneResult, 
 	if err != nil {
 		return nil, errors.New("Error in password hashing")
 	}
-	newUser := models.User{
+	newUser := userModel.User{
 		Id:                  primitive.NewObjectID(),
 		Phone:               user.Phone,
 		Password:            hashed,
@@ -60,7 +70,7 @@ func CreateUser(ctx context.Context, user models.User) (*mongo.InsertOneResult, 
 	return userCollection.InsertOne(ctx, newUser)
 }
 
-func LoginUser(ctx context.Context, userLogin models.UserLogin) (*string, error) {
+func LoginUser(ctx context.Context, userLogin userModel.UserLogin) (*string, error) {
 	var jwtKey = []byte(configs.Common.Service.Secret)
 	userByPhone, _ := GetUserByPhone(ctx, userLogin.Phone)
 	if userByPhone == nil {
@@ -72,7 +82,7 @@ func LoginUser(ctx context.Context, userLogin models.UserLogin) (*string, error)
 	}
 
 	expirationTime := time.Now().Add(170 * time.Hour)
-	claims := &Claims{
+	claims := &JwtClaims{
 		Id: userByPhone.Id,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expirationTime.Unix(),
@@ -84,4 +94,24 @@ func LoginUser(ctx context.Context, userLogin models.UserLogin) (*string, error)
 		return nil, errors.New("Can not login")
 	}
 	return &tokenString, nil
+}
+
+func VerifyToken(token string) (*UserClaims, error) {
+	fmt.Print(token[0])
+	var jwtKey = []byte(configs.Common.Service.Secret)
+	claims := &JwtClaims{}
+	tkn, err := jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (interface{}, error) {
+		return jwtKey, nil
+	})
+
+	userClaims := &UserClaims{
+		Id: claims.Id,
+	}
+	if err != nil {
+		return nil, err
+	}
+	if !tkn.Valid {
+		return nil, nil
+	}
+	return userClaims, nil
 }
