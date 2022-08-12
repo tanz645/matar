@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"matar/clients"
+	"matar/common/enum"
 	"matar/configs"
 	"matar/models/userModel"
 	"matar/utils"
@@ -23,6 +24,72 @@ func GetUserByPhone(ctx context.Context, phone string) (*userModel.User, error) 
 	if err != nil {
 		fmt.Println(err)
 		return nil, errors.New("Can not get user")
+	}
+	return &user, nil
+}
+
+func PushAdId(ctx context.Context, userId string, adId string) (*userModel.User, error) {
+	var user userModel.User
+	var userCollection *mongo.Collection = clients.GetMongoCollection(clients.GetConnectedMongoClient(), userModel.UserCollectionName)
+	objId, err := primitive.ObjectIDFromHex(userId)
+	if err != nil {
+		return nil, errors.New("Can not get user")
+	}
+	filter := bson.D{{Key: "_id", Value: objId}}
+	update := bson.D{
+		{
+			Key:   "$addToSet",
+			Value: bson.D{{Key: "ad_ids", Value: adId}},
+		},
+		{
+			Key: "$set",
+			Value: bson.D{
+				{Key: "updated_at", Value: time.Now()},
+				{Key: "updated_by", Value: enum.UPDATED_BY_SYSTEM},
+			},
+		},
+	}
+	err = userCollection.FindOneAndUpdate(
+		ctx,
+		filter,
+		update,
+	).Decode(&user)
+	fmt.Println(&user)
+	if err != nil {
+		return nil, errors.New("Can not update user")
+	}
+	return &user, nil
+}
+
+func RemoveAdId(ctx context.Context, userId string, adId string) (*userModel.User, error) {
+	var user userModel.User
+	var userCollection *mongo.Collection = clients.GetMongoCollection(clients.GetConnectedMongoClient(), userModel.UserCollectionName)
+	objId, err := primitive.ObjectIDFromHex(userId)
+	if err != nil {
+		return nil, errors.New("Can not get user")
+	}
+	filter := bson.D{{Key: "_id", Value: objId}}
+	update := bson.D{
+		{
+			Key:   "$pull",
+			Value: bson.D{{Key: "ad_ids", Value: adId}},
+		},
+		{
+			Key: "$set",
+			Value: bson.D{
+				{Key: "updated_at", Value: time.Now()},
+				{Key: "updated_by", Value: enum.UPDATED_BY_SYSTEM},
+			},
+		},
+	}
+	err = userCollection.FindOneAndUpdate(
+		ctx,
+		filter,
+		update,
+	).Decode(&user)
+	fmt.Println(&user)
+	if err != nil {
+		return nil, errors.New("Can not update user")
 	}
 	return &user, nil
 }
@@ -52,12 +119,21 @@ func CreateUser(ctx context.Context, user userModel.User) (*mongo.InsertOneResul
 	if err != nil {
 		return nil, errors.New("Error in password hashing")
 	}
+	var maxAd int16 = 1
+	if user.Type == enum.USER_TYPE_COMPANY {
+		maxAd = 30
+	}
+	if user.Type == enum.USER_TYPE_INDIVIDUAL {
+		maxAd = 3
+	}
 	newUser := userModel.User{
 		Id:                  primitive.NewObjectID(),
 		Phone:               user.Phone,
 		Password:            hashed,
 		Type:                user.Type,
 		Country:             user.Country,
+		AdIds:               []string{},
+		MaxAd:               maxAd,
 		Email:               user.Email,
 		PhoneNumberVerified: false,
 		EmailVerified:       false,

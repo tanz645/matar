@@ -40,6 +40,8 @@ type User struct {
 	EmailVerified       bool               `json:"email_number_verified" bson:"email_number_verified"`
 	Active              bool               `json:"active"`
 	Company             *company           `json:"company,omitempty"`
+	AdIds               []string           `json:"ad_ids" bson:"ad_ids"`
+	MaxAd               int16              `json:"max_ad" bson:"max_ad"`
 	CreatedAt           time.Time          `json:"created_at" bson:"created_at"`
 	UpdatedAt           time.Time          `json:"updated_at" bson:"updated_at"`
 }
@@ -49,9 +51,9 @@ type UserLogin struct {
 	Password string `json:"password" validate:"required,max=40,min=6"`
 }
 
-func CreateUserIndexes(client *mongo.Client) {
+func CreateUserIndexes(ctx context.Context, client *mongo.Client) {
 	col := clients.GetMongoCollection(client, UserCollectionName)
-	col.Indexes().CreateOne(context.Background(), mongo.IndexModel{
+	col.Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys: bson.M{"phone": 1},
 	})
 }

@@ -11,8 +11,13 @@ import (
 func VerifyUser() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := c.Request.Header["Authorization"]
-		claims, _ := userService.VerifyToken(token[0])
-		if claims == nil {
+		if token == nil {
+			c.JSON(http.StatusUnauthorized, responses.FailedResponse{Status: http.StatusUnauthorized, Error: true, Message: "Not Allowed", Data: nil})
+			c.Abort()
+			return
+		}
+		claims, err := userService.VerifyToken(token[0])
+		if err != nil || claims == nil {
 			c.JSON(http.StatusUnauthorized, responses.FailedResponse{Status: http.StatusUnauthorized, Error: true, Message: "Not Allowed", Data: nil})
 			c.Abort()
 			return

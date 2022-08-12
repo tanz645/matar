@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"matar/configs"
-	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -12,16 +11,12 @@ import (
 
 var mongoConnectedClient *mongo.Client
 
-func ConnectToMongoDB() *mongo.Client {
+func ConnectToMongoDB(ctx context.Context) *mongo.Client {
 	fmt.Println(configs.GetEnvVar("MONGOURI"))
 	client, err := mongo.NewClient(options.Client().ApplyURI(configs.GetEnvVar("MONGOURI")))
 	if err != nil {
 		panic(err)
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
 	err = client.Connect(ctx)
 	if err != nil {
 		panic(err)

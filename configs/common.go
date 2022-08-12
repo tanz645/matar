@@ -20,9 +20,9 @@ func loadCommonConfigurations() commonConfigurations {
 	var cc commonConfigurations
 
 	cc.Service.Name = "matar"
-	cc.Service.Detail = "user related"
+	cc.Service.Detail = "mooviro intial services"
 	cc.Service.Port = "9000"
 	cc.Service.Secret = "mooviro-matar-365"
-	cc.Database.Name = "user"
+	cc.Database.Name = "matar"
 	return cc
 }
