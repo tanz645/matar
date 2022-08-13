@@ -1,4 +1,4 @@
-package automobileAdModel
+package automobileAdSchema
 
 import (
 	"context"
@@ -98,7 +98,7 @@ type AutomobileAd struct {
 	Title            string             `json:"title" validate:"required"`
 	UserId           string             `json:"user_id" bson:"user_id"`
 	Brand            brand              `json:"brand" validate:"required"`
-	BodyType         []string           `json:"body_type" bson:"body_type" validate:"required,min=1,max=2,dive,oneof=sedan convertible_roadstar sports_supercar cuv_crossover suv_muv hatchback wagon_stationwagon pickup van_minivan bus_minibus truck motorcycle atv"`
+	BodyType         []string           `json:"body_type" bson:"body_type" validate:"required,min=1,max=2,dive,oneof=sedan coupe convertible_roadstar sports_supercar cuv_crossover suv_muv hatchback wagon_stationwagon pickup van_minivan bus_minibus truck motorcycle atv"`
 	Address          address            `json:"address" validate:"required"`
 	Model            model              `json:"model" validate:"required"`
 	Milage           milage             `json:"milage" validate:"required"`
@@ -144,6 +144,36 @@ type AutomobileAdGeneral struct {
 	UpdatedAt        time.Time          `json:"updated_at" bson:"updated_at"`
 }
 
+type AutomobileAdInListing struct {
+	Id           primitive.ObjectID `json:"id" bson:"_id"`
+	Title        string             `json:"title"`
+	Brand        brand              `json:"brand"`
+	BodyType     []string           `json:"body_type" bson:"body_type"`
+	Address      address            `json:"address"`
+	Model        model              `json:"model"`
+	Milage       milage             `json:"milage"`
+	Price        price              `json:"price"`
+	Images       []string           `json:"images"`
+	FuelType     string             `json:"fuel_type" bson:"fuel_type"`
+	Color        string             `json:"color"`
+	Transmission string             `json:"transmission"`
+	WheelDrive   string             `json:"wheel_drive" bson:"wheel_drive"`
+	CreatedAt    time.Time          `json:"created_at" bson:"created_at"`
+}
+
+type SearchAutomobileAdGeneral struct {
+	Limit        uint16 `form:"limit" validate:"required,max=50,min=1"`
+	Page         uint16 `form:"page" validate:"required,min=1"`
+	BrandName    string `form:"brand_name"`
+	CityName     string `form:"city_name"`
+	BodyType     string `form:"body_type"`
+	FuelType     string `form:"fuel_type"`
+	Transmission string `form:"transmission" validate:"omitempty,oneof=automatic manual"`
+	WheelDrive   string `json:"wheel_drive" bson:"wheel_drive"  validate:"omitempty,oneof=awd 4wd rwd fwd"`
+	SortBy       string `form:"sort_by" validate:"required,oneof=price.total_amount milage.amount created_at"`
+	SortOrder    int8   `form:"sort_order" validate:"required,min=-1,max=1"`
+}
+
 func CreateAutomobileAdIndexes(ctx context.Context, client *mongo.Client) {
 	col := clients.GetMongoCollection(client, AutomobileAdCollectionName)
 	models := []mongo.IndexModel{
@@ -152,7 +182,11 @@ func CreateAutomobileAdIndexes(ctx context.Context, client *mongo.Client) {
 				{Key: "address.city", Value: bsonx.Int32(1)},
 				{Key: "body_type", Value: bsonx.Int32(1)},
 				{Key: "brand.name", Value: bsonx.Int32(1)},
+				{Key: "transmission", Value: bsonx.Int32(1)},
+				{Key: "fuel_type", Value: bsonx.Int32(1)},
+				{Key: "wheel_drive", Value: bsonx.Int32(1)},
 				{Key: "price.total_amount", Value: bsonx.Int32(1)},
+				{Key: "milage.amount", Value: bsonx.Int32(1)},
 			},
 		},
 		{
@@ -160,7 +194,11 @@ func CreateAutomobileAdIndexes(ctx context.Context, client *mongo.Client) {
 				{Key: "body_type", Value: bsonx.Int32(1)},
 				{Key: "address.city", Value: bsonx.Int32(1)},
 				{Key: "brand.name", Value: bsonx.Int32(1)},
+				{Key: "transmission", Value: bsonx.Int32(1)},
+				{Key: "fuel_type", Value: bsonx.Int32(1)},
+				{Key: "wheel_drive", Value: bsonx.Int32(1)},
 				{Key: "price.total_amount", Value: bsonx.Int32(1)},
+				{Key: "milage.amount", Value: bsonx.Int32(1)},
 			},
 		},
 		{
@@ -168,7 +206,23 @@ func CreateAutomobileAdIndexes(ctx context.Context, client *mongo.Client) {
 				{Key: "brand.name", Value: bsonx.Int32(1)},
 				{Key: "address.city", Value: bsonx.Int32(1)},
 				{Key: "body_type", Value: bsonx.Int32(1)},
+				{Key: "transmission", Value: bsonx.Int32(1)},
+				{Key: "fuel_type", Value: bsonx.Int32(1)},
+				{Key: "wheel_drive", Value: bsonx.Int32(1)},
 				{Key: "price.total_amount", Value: bsonx.Int32(1)},
+				{Key: "milage.amount", Value: bsonx.Int32(1)},
+			},
+		},
+		{
+			Keys: bsonx.Doc{
+				{Key: "transmission", Value: bsonx.Int32(1)},
+				{Key: "address.city", Value: bsonx.Int32(1)},
+				{Key: "body_type", Value: bsonx.Int32(1)},
+				{Key: "brand.name", Value: bsonx.Int32(1)},
+				{Key: "fuel_type", Value: bsonx.Int32(1)},
+				{Key: "wheel_drive", Value: bsonx.Int32(1)},
+				{Key: "price.total_amount", Value: bsonx.Int32(1)},
+				{Key: "milage.amount", Value: bsonx.Int32(1)},
 			},
 		},
 		{

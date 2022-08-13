@@ -13,3 +13,8 @@ type SuccessResponse struct {
 	Message string      `json:"message"`
 	Data    interface{} `json:"data"`
 }
+
+type ListingResponse struct {
+	TotalCount uint64      `json:"total_count"`
+	List       interface{} `json:"list"`
+}

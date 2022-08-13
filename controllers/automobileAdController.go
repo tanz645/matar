@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"matar/common/responses"
-	"matar/models/automobileAdModel"
+	"matar/schemas/automobileAdSchema"
 	"matar/services/automobileAdService"
 	"matar/services/userService"
 	"net/http"
@@ -20,7 +20,7 @@ func CreateAutomobileAd() gin.HandlerFunc {
 		ctx = context.WithValue(ctx, userService.UserClaims{}, c.Value("user"))
 		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 
-		var automobileAd automobileAdModel.AutomobileAd
+		var automobileAd automobileAdSchema.AutomobileAd
 		defer cancel()
 		if err := c.BindJSON(&automobileAd); err != nil {
 			c.JSON(http.StatusBadRequest, responses.FailedResponse{Status: http.StatusBadRequest, Error: true, Message: "Ad can not be created", Data: err.Error()})
@@ -51,7 +51,7 @@ func GetAutomobileAdById() gin.HandlerFunc {
 		id := c.Param("id")
 
 		defer cancel()
-		result, err := automobileAdService.GeAutomobileAdGeneralById(ctx, id)
+		result, err := automobileAdService.GetAutomobileAdGeneralById(ctx, id)
 		if err != nil {
 			fmt.Println(err)
 			c.JSON(http.StatusNotFound, responses.FailedResponse{Status: http.StatusNotFound, Error: true, Message: "Can not get Ad", Data: nil})
@@ -70,7 +70,7 @@ func UpdateAutomobileAdById() gin.HandlerFunc {
 		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		id := c.Param("id")
 
-		var automobileAd automobileAdModel.AutomobileAd
+		var automobileAd automobileAdSchema.AutomobileAd
 		defer cancel()
 		if err := c.BindJSON(&automobileAd); err != nil {
 			c.JSON(http.StatusBadRequest, responses.FailedResponse{Status: http.StatusBadRequest, Error: true, Message: "Ad can not be updated", Data: err.Error()})
@@ -110,5 +110,30 @@ func DeleteAutomobileAdById() gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, responses.SuccessResponse{Status: http.StatusOK, Success: true, Message: "Ad removed", Data: nil})
+	}
+}
+
+func SearchAutomobileAd() gin.HandlerFunc {
+
+	return func(c *gin.Context) {
+		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+		var searchAutomobileAdGeneral automobileAdSchema.SearchAutomobileAdGeneral
+		if err := c.ShouldBindQuery(&searchAutomobileAdGeneral); err != nil {
+			c.JSON(http.StatusBadRequest, responses.FailedResponse{Status: http.StatusBadRequest, Error: true, Message: "Ad can not be created", Data: err.Error()})
+			return
+		}
+		if validationErr := validate.Struct(&searchAutomobileAdGeneral); validationErr != nil {
+			c.JSON(http.StatusUnprocessableEntity, responses.FailedResponse{Status: http.StatusUnprocessableEntity, Error: true, Message: "Ad can not be created", Data: validationErr.Error()})
+			return
+		}
+		result, err := automobileAdService.SearchAutomobileAdGeneral(ctx, searchAutomobileAdGeneral)
+		if err != nil {
+			fmt.Println(err)
+			c.JSON(http.StatusInternalServerError, responses.FailedResponse{Status: http.StatusInternalServerError, Error: true, Message: "Can not get Ads", Data: nil})
+			return
+		}
+		c.JSON(http.StatusOK, responses.SuccessResponse{Status: http.StatusOK, Success: true, Message: "", Data: result})
 	}
 }

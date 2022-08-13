@@ -3,7 +3,7 @@ package controllers
 import (
 	"context"
 	"matar/common/responses"
-	"matar/models/userModel"
+	"matar/schemas/userSchema"
 	"matar/services/userService"
 	"matar/utils/helper"
 	"net/http"
@@ -18,7 +18,7 @@ func CreateUser() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := context.Background()
 		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-		var user userModel.User
+		var user userSchema.User
 		defer cancel()
 		if err := c.BindJSON(&user); err != nil {
 			c.JSON(http.StatusBadRequest, responses.FailedResponse{Status: http.StatusBadRequest, Error: true, Message: "User can not be created", Data: err.Error()})
@@ -49,7 +49,7 @@ func LoginUser() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := context.Background()
 		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-		var userLogin userModel.UserLogin
+		var userLogin userSchema.UserLogin
 		defer cancel()
 		if err := c.BindJSON(&userLogin); err != nil {
 			c.JSON(http.StatusBadRequest, responses.FailedResponse{Status: http.StatusBadRequest, Error: true, Message: "User can not be created", Data: err.Error()})

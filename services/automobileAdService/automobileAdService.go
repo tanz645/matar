@@ -5,19 +5,22 @@ import (
 	"errors"
 	"fmt"
 	"matar/clients"
-	"matar/models/automobileAdModel"
+	"matar/common/responses"
+	"matar/schemas/automobileAdSchema"
 	"matar/services/userService"
 	"matar/utils/helper"
+	"strings"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func GeAutomobileAdGeneralById(ctx context.Context, id string) (*automobileAdModel.AutomobileAdGeneral, error) {
-	var automobileAd automobileAdModel.AutomobileAdGeneral
-	var automobileAdCollection *mongo.Collection = clients.GetMongoCollection(clients.GetConnectedMongoClient(), automobileAdModel.AutomobileAdCollectionName)
+func GetAutomobileAdGeneralById(ctx context.Context, id string) (*automobileAdSchema.AutomobileAdGeneral, error) {
+	var automobileAd automobileAdSchema.AutomobileAdGeneral
+	var automobileAdCollection *mongo.Collection = clients.GetMongoCollection(clients.GetConnectedMongoClient(), automobileAdSchema.AutomobileAdCollectionName)
 	objId, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		return nil, err
@@ -29,15 +32,15 @@ func GeAutomobileAdGeneralById(ctx context.Context, id string) (*automobileAdMod
 	return &automobileAd, nil
 }
 
-func GetAutomobileAdsGeneralByUserId(ctx context.Context, userId string) ([]automobileAdModel.AutomobileAdGeneral, error) {
-	var automobileAds []automobileAdModel.AutomobileAdGeneral
-	var automobileAdCollection *mongo.Collection = clients.GetMongoCollection(clients.GetConnectedMongoClient(), automobileAdModel.AutomobileAdCollectionName)
+func GetAutomobileAdsGeneralByUserId(ctx context.Context, userId string) ([]automobileAdSchema.AutomobileAdGeneral, error) {
+	var automobileAds []automobileAdSchema.AutomobileAdGeneral
+	var automobileAdCollection *mongo.Collection = clients.GetMongoCollection(clients.GetConnectedMongoClient(), automobileAdSchema.AutomobileAdCollectionName)
 	results, err := automobileAdCollection.Find(ctx, bson.M{"user_id": userId})
 	if err != nil {
 		return nil, err
 	}
 	for results.Next(ctx) {
-		var automobileAd automobileAdModel.AutomobileAdGeneral
+		var automobileAd automobileAdSchema.AutomobileAdGeneral
 		if err = results.Decode(&automobileAd); err != nil {
 			return nil, err
 		}
@@ -48,7 +51,7 @@ func GetAutomobileAdsGeneralByUserId(ctx context.Context, userId string) ([]auto
 }
 
 func GetCountAutomobileAdsGeneralByUserId(ctx context.Context, userId string) (int64, error) {
-	var automobileAdCollection *mongo.Collection = clients.GetMongoCollection(clients.GetConnectedMongoClient(), automobileAdModel.AutomobileAdCollectionName)
+	var automobileAdCollection *mongo.Collection = clients.GetMongoCollection(clients.GetConnectedMongoClient(), automobileAdSchema.AutomobileAdCollectionName)
 	count, err := automobileAdCollection.CountDocuments(ctx, bson.M{"user_id": userId})
 	if err != nil {
 		fmt.Println(err)
@@ -59,7 +62,7 @@ func GetCountAutomobileAdsGeneralByUserId(ctx context.Context, userId string) (i
 }
 
 func DeleteAutomobileAdById(ctx context.Context, id string) error {
-	var automobileAdCollection *mongo.Collection = clients.GetMongoCollection(clients.GetConnectedMongoClient(), automobileAdModel.AutomobileAdCollectionName)
+	var automobileAdCollection *mongo.Collection = clients.GetMongoCollection(clients.GetConnectedMongoClient(), automobileAdSchema.AutomobileAdCollectionName)
 	objId, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		return err
@@ -72,8 +75,8 @@ func DeleteAutomobileAdById(ctx context.Context, id string) error {
 	return nil
 }
 
-func CreateAutomobileAd(ctx context.Context, automobileAd automobileAdModel.AutomobileAd) (string, error) {
-	var automobileAdCollection *mongo.Collection = clients.GetMongoCollection(clients.GetConnectedMongoClient(), automobileAdModel.AutomobileAdCollectionName)
+func CreateAutomobileAd(ctx context.Context, automobileAd automobileAdSchema.AutomobileAd) (string, error) {
+	var automobileAdCollection *mongo.Collection = clients.GetMongoCollection(clients.GetConnectedMongoClient(), automobileAdSchema.AutomobileAdCollectionName)
 	userClaims := ctx.Value(userService.UserClaims{})
 	userId := userClaims.(*userService.UserClaims).Id.Hex()
 	user, err := userService.GetUserById(ctx, userId)
@@ -87,7 +90,7 @@ func CreateAutomobileAd(ctx context.Context, automobileAd automobileAdModel.Auto
 	if totalAutomobileAds >= int64(user.MaxAd) {
 		return "", errors.New("can not exceed max ad per account")
 	}
-	newAutomobileAd := automobileAdModel.AutomobileAd{
+	newAutomobileAd := automobileAdSchema.AutomobileAd{
 		Id:               primitive.NewObjectID(),
 		Title:            automobileAd.Title,
 		UserId:           userId,
@@ -126,8 +129,8 @@ func CreateAutomobileAd(ctx context.Context, automobileAd automobileAdModel.Auto
 	return insertedId, nil
 }
 
-func UpdateAutomobileAdById(ctx context.Context, automobileAd automobileAdModel.AutomobileAd, adId string) (string, error) {
-	var automobileAdCollection *mongo.Collection = clients.GetMongoCollection(clients.GetConnectedMongoClient(), automobileAdModel.AutomobileAdCollectionName)
+func UpdateAutomobileAdById(ctx context.Context, automobileAd automobileAdSchema.AutomobileAd, adId string) (string, error) {
+	var automobileAdCollection *mongo.Collection = clients.GetMongoCollection(clients.GetConnectedMongoClient(), automobileAdSchema.AutomobileAdCollectionName)
 	userClaims := ctx.Value(userService.UserClaims{})
 	userId := userClaims.(*userService.UserClaims).Id.Hex()
 	user, err := userService.GetUserById(ctx, userId)
@@ -193,4 +196,80 @@ func RemoveAutomobileAdGenera(ctx context.Context, adId string) error {
 		}
 	}
 	return err
+}
+
+func SearchAutomobileAdGeneral(ctx context.Context, query automobileAdSchema.SearchAutomobileAdGeneral) (*responses.ListingResponse, error) {
+	var automobileAds []automobileAdSchema.AutomobileAdInListing = []automobileAdSchema.AutomobileAdInListing{}
+	var listingResponse responses.ListingResponse
+	listingResponse.TotalCount = 0
+	listingResponse.List = automobileAds
+	var automobileAdCollection *mongo.Collection = clients.GetMongoCollection(clients.GetConnectedMongoClient(), automobileAdSchema.AutomobileAdCollectionName)
+	limit := int64(query.Limit)
+	page := int64(query.Page)
+	sort := bson.D{{Key: "milage", Value: 1}}
+	skip := int64(page*limit - limit)
+	match := bson.D{{Key: "active", Value: true}}
+	projection := bson.D{
+		{Key: "_id", Value: 1},
+		{Key: "title", Value: 1},
+		{Key: "brand", Value: 1},
+		{Key: "body_type", Value: 1},
+		{Key: "address", Value: 1},
+		{Key: "model", Value: 1},
+		{Key: "milage", Value: 1},
+		{Key: "price", Value: 1},
+		{Key: "images", Value: 1},
+		{Key: "fuel_type", Value: 1},
+		{Key: "color", Value: 1},
+		{Key: "transmission", Value: 1},
+		{Key: "wheel_drive", Value: 1},
+		{Key: "created_at", Value: 1},
+	}
+	if len(query.CityName) > 0 {
+		cities := strings.Split(query.CityName, ",")
+		match = append(match, bson.E{Key: "address.city", Value: bson.D{{Key: "$in", Value: cities}}})
+	}
+	if len(query.BrandName) > 0 {
+		brands := strings.Split(query.BrandName, ",")
+		match = append(match, bson.E{Key: "brand.name", Value: bson.D{{Key: "$in", Value: brands}}})
+	}
+	if len(query.BodyType) > 0 {
+		bodyTypes := strings.Split(query.BodyType, ",")
+		match = append(match, bson.E{Key: "body_type", Value: bson.D{{Key: "$in", Value: bodyTypes}}})
+	}
+	if len(query.Transmission) > 0 {
+		transmissions := strings.Split(query.Transmission, ",")
+		match = append(match, bson.E{Key: "transmission", Value: bson.D{{Key: "$in", Value: transmissions}}})
+	}
+	if len(query.FuelType) > 0 {
+		fuelTypes := strings.Split(query.FuelType, ",")
+		match = append(match, bson.E{Key: "fuel_type", Value: bson.D{{Key: "$in", Value: fuelTypes}}})
+	}
+	if len(query.WheelDrive) > 0 {
+		wheelDrives := strings.Split(query.WheelDrive, ",")
+		match = append(match, bson.E{Key: "wheel_drive", Value: bson.D{{Key: "$in", Value: wheelDrives}}})
+	}
+	if len(query.SortBy) > 0 && query.SortOrder >= -1 {
+		sort = bson.D{{Key: query.SortBy, Value: query.SortOrder}}
+	}
+	fmt.Println(match)
+	opts := options.Find().SetProjection(projection).SetSort(sort).SetSkip(skip).SetLimit(limit)
+	results, err := automobileAdCollection.Find(ctx, match, opts)
+	if err != nil {
+		return nil, err
+	}
+	totalCount, err := automobileAdCollection.CountDocuments(ctx, match)
+	if err != nil {
+		return nil, err
+	}
+	for results.Next(ctx) {
+		var automobileAd automobileAdSchema.AutomobileAdInListing
+		if err = results.Decode(&automobileAd); err != nil {
+			return nil, err
+		}
+		automobileAds = append(automobileAds, automobileAd)
+	}
+	listingResponse.TotalCount = uint64(totalCount)
+	listingResponse.List = automobileAds
+	return &listingResponse, nil
 }

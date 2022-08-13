@@ -7,7 +7,7 @@ import (
 	"matar/clients"
 	"matar/common/enum"
 	"matar/configs"
-	"matar/models/userModel"
+	"matar/schemas/userSchema"
 	"matar/utils"
 	"time"
 
@@ -17,9 +17,9 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func GetUserByPhone(ctx context.Context, phone string) (*userModel.User, error) {
-	var user userModel.User
-	var userCollection *mongo.Collection = clients.GetMongoCollection(clients.GetConnectedMongoClient(), userModel.UserCollectionName)
+func GetUserByPhone(ctx context.Context, phone string) (*userSchema.User, error) {
+	var user userSchema.User
+	var userCollection *mongo.Collection = clients.GetMongoCollection(clients.GetConnectedMongoClient(), userSchema.UserCollectionName)
 	err := userCollection.FindOne(ctx, bson.M{"phone": phone}).Decode(&user)
 	if err != nil {
 		fmt.Println(err)
@@ -28,9 +28,9 @@ func GetUserByPhone(ctx context.Context, phone string) (*userModel.User, error) 
 	return &user, nil
 }
 
-func PushAdId(ctx context.Context, userId string, adId string) (*userModel.User, error) {
-	var user userModel.User
-	var userCollection *mongo.Collection = clients.GetMongoCollection(clients.GetConnectedMongoClient(), userModel.UserCollectionName)
+func PushAdId(ctx context.Context, userId string, adId string) (*userSchema.User, error) {
+	var user userSchema.User
+	var userCollection *mongo.Collection = clients.GetMongoCollection(clients.GetConnectedMongoClient(), userSchema.UserCollectionName)
 	objId, err := primitive.ObjectIDFromHex(userId)
 	if err != nil {
 		return nil, errors.New("Can not get user")
@@ -61,9 +61,9 @@ func PushAdId(ctx context.Context, userId string, adId string) (*userModel.User,
 	return &user, nil
 }
 
-func RemoveAdId(ctx context.Context, userId string, adId string) (*userModel.User, error) {
-	var user userModel.User
-	var userCollection *mongo.Collection = clients.GetMongoCollection(clients.GetConnectedMongoClient(), userModel.UserCollectionName)
+func RemoveAdId(ctx context.Context, userId string, adId string) (*userSchema.User, error) {
+	var user userSchema.User
+	var userCollection *mongo.Collection = clients.GetMongoCollection(clients.GetConnectedMongoClient(), userSchema.UserCollectionName)
 	objId, err := primitive.ObjectIDFromHex(userId)
 	if err != nil {
 		return nil, errors.New("Can not get user")
@@ -94,9 +94,9 @@ func RemoveAdId(ctx context.Context, userId string, adId string) (*userModel.Use
 	return &user, nil
 }
 
-func GetUserById(ctx context.Context, id string) (*userModel.User, error) {
-	var user userModel.User
-	var userCollection *mongo.Collection = clients.GetMongoCollection(clients.GetConnectedMongoClient(), userModel.UserCollectionName)
+func GetUserById(ctx context.Context, id string) (*userSchema.User, error) {
+	var user userSchema.User
+	var userCollection *mongo.Collection = clients.GetMongoCollection(clients.GetConnectedMongoClient(), userSchema.UserCollectionName)
 	objId, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		return nil, errors.New("Can not get user")
@@ -109,8 +109,8 @@ func GetUserById(ctx context.Context, id string) (*userModel.User, error) {
 	return &user, nil
 }
 
-func CreateUser(ctx context.Context, user userModel.User) (*mongo.InsertOneResult, error) {
-	var userCollection *mongo.Collection = clients.GetMongoCollection(clients.GetConnectedMongoClient(), userModel.UserCollectionName)
+func CreateUser(ctx context.Context, user userSchema.User) (*mongo.InsertOneResult, error) {
+	var userCollection *mongo.Collection = clients.GetMongoCollection(clients.GetConnectedMongoClient(), userSchema.UserCollectionName)
 	userByPhone, _ := GetUserByPhone(ctx, user.Phone)
 	if userByPhone != nil && userByPhone.PhoneNumberVerified == true {
 		return nil, errors.New("Phone number already verified, please login using it")
@@ -126,7 +126,7 @@ func CreateUser(ctx context.Context, user userModel.User) (*mongo.InsertOneResul
 	if user.Type == enum.USER_TYPE_INDIVIDUAL {
 		maxAd = 3
 	}
-	newUser := userModel.User{
+	newUser := userSchema.User{
 		Id:                  primitive.NewObjectID(),
 		Phone:               user.Phone,
 		Password:            hashed,
@@ -146,7 +146,7 @@ func CreateUser(ctx context.Context, user userModel.User) (*mongo.InsertOneResul
 	return userCollection.InsertOne(ctx, newUser)
 }
 
-func LoginUser(ctx context.Context, userLogin userModel.UserLogin) (*string, error) {
+func LoginUser(ctx context.Context, userLogin userSchema.UserLogin) (*string, error) {
 	var jwtKey = []byte(configs.Common.Service.Secret)
 	userByPhone, _ := GetUserByPhone(ctx, userLogin.Phone)
 	if userByPhone == nil {
