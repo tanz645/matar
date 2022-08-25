@@ -122,7 +122,6 @@ type AutomobileAd struct {
 type AutomobileAdGeneral struct {
 	Id               primitive.ObjectID `json:"id,omitempty" bson:"_id"`
 	Title            string             `json:"title"`
-	UserId           string             `json:"user_id" bson:"user_id"`
 	Brand            brand              `json:"brand"`
 	BodyType         []string           `json:"body_type" bson:"body_type"`
 	Address          address            `json:"address"`
@@ -172,6 +171,10 @@ type SearchAutomobileAdGeneral struct {
 	WheelDrive   string `json:"wheel_drive" bson:"wheel_drive"  validate:"omitempty,oneof=awd 4wd rwd fwd"`
 	SortBy       string `form:"sort_by" validate:"required,oneof=price.total_amount milage.amount created_at"`
 	SortOrder    int8   `form:"sort_order" validate:"required,min=-1,max=1"`
+}
+
+type UpdateAutomobileAdActiveStatus struct {
+	Active bool `json:"active"`
 }
 
 func CreateAutomobileAdIndexes(ctx context.Context, client *mongo.Client) {

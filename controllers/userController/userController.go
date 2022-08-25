@@ -1,8 +1,9 @@
-package controllers
+package userController
 
 import (
 	"context"
 	"matar/common/responses"
+	"matar/controllers"
 	"matar/schemas/userSchema"
 	"matar/services/userService"
 	"matar/utils/helper"
@@ -24,7 +25,7 @@ func CreateUser() gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, responses.FailedResponse{Status: http.StatusBadRequest, Error: true, Message: "User can not be created", Data: err.Error()})
 			return
 		}
-		if validationErr := validate.Struct(&user); validationErr != nil {
+		if validationErr := controllers.Validate.Struct(&user); validationErr != nil {
 			c.JSON(http.StatusUnprocessableEntity, responses.FailedResponse{Status: http.StatusUnprocessableEntity, Error: true, Message: "User can not be created", Data: validationErr.Error()})
 			return
 		}
@@ -55,7 +56,7 @@ func LoginUser() gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, responses.FailedResponse{Status: http.StatusBadRequest, Error: true, Message: "User can not be created", Data: err.Error()})
 			return
 		}
-		if validationErr := validate.Struct(&userLogin); validationErr != nil {
+		if validationErr := controllers.Validate.Struct(&userLogin); validationErr != nil {
 			c.JSON(http.StatusUnprocessableEntity, responses.FailedResponse{Status: http.StatusUnprocessableEntity, Error: true, Message: "User can not be created", Data: validationErr.Error()})
 			return
 		}

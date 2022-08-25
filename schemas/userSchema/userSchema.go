@@ -34,6 +34,7 @@ type User struct {
 	Phone               string             `json:"phone" validate:"required,e164"`
 	Password            string             `json:"password" validate:"required,max=40,min=6"`
 	Type                string             `json:"type" validate:"required,oneof=individual company"`
+	Role                string             `json:"role" validate:"oneof=general"`
 	Country             string             `json:"country" validate:"required,oneof=Morocco"`
 	Email               string             `json:"email,omitempty"`
 	PhoneNumberVerified bool               `json:"phone_number_verified" bson:"phone_number_verified"`

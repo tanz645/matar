@@ -1,9 +1,10 @@
-package controllers
+package automobileAdController
 
 import (
 	"context"
 	"fmt"
 	"matar/common/responses"
+	"matar/controllers"
 	"matar/schemas/automobileAdSchema"
 	"matar/services/automobileAdService"
 	"matar/services/userService"
@@ -26,7 +27,7 @@ func CreateAutomobileAd() gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, responses.FailedResponse{Status: http.StatusBadRequest, Error: true, Message: "Ad can not be created", Data: err.Error()})
 			return
 		}
-		if validationErr := validate.Struct(&automobileAd); validationErr != nil {
+		if validationErr := controllers.Validate.Struct(&automobileAd); validationErr != nil {
 			c.JSON(http.StatusUnprocessableEntity, responses.FailedResponse{Status: http.StatusUnprocessableEntity, Error: true, Message: "Ad can not be created", Data: validationErr.Error()})
 			return
 		}
@@ -76,7 +77,7 @@ func UpdateAutomobileAdById() gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, responses.FailedResponse{Status: http.StatusBadRequest, Error: true, Message: "Ad can not be updated", Data: err.Error()})
 			return
 		}
-		if validationErr := validate.Struct(&automobileAd); validationErr != nil {
+		if validationErr := controllers.Validate.Struct(&automobileAd); validationErr != nil {
 			c.JSON(http.StatusUnprocessableEntity, responses.FailedResponse{Status: http.StatusUnprocessableEntity, Error: true, Message: "Ad can not be updated", Data: validationErr.Error()})
 			return
 		}
@@ -124,7 +125,7 @@ func SearchAutomobileAd() gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, responses.FailedResponse{Status: http.StatusBadRequest, Error: true, Message: "Ad can not be created", Data: err.Error()})
 			return
 		}
-		if validationErr := validate.Struct(&searchAutomobileAdGeneral); validationErr != nil {
+		if validationErr := controllers.Validate.Struct(&searchAutomobileAdGeneral); validationErr != nil {
 			c.JSON(http.StatusUnprocessableEntity, responses.FailedResponse{Status: http.StatusUnprocessableEntity, Error: true, Message: "Ad can not be created", Data: validationErr.Error()})
 			return
 		}
@@ -135,5 +136,44 @@ func SearchAutomobileAd() gin.HandlerFunc {
 			return
 		}
 		c.JSON(http.StatusOK, responses.SuccessResponse{Status: http.StatusOK, Success: true, Message: "", Data: result})
+	}
+}
+
+func GetAutomobileAdByUserId() gin.HandlerFunc {
+
+	return func(c *gin.Context) {
+		ctx := context.Background()
+		ctx = context.WithValue(ctx, userService.UserClaims{}, c.Value("user"))
+		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		id := c.Param("id")
+
+		defer cancel()
+		result, err := automobileAdService.GetAutomobileAdGeneralByUserId(ctx, id)
+		if err != nil || result == nil {
+			fmt.Println(err)
+			c.JSON(http.StatusNotFound, responses.FailedResponse{Status: http.StatusNotFound, Error: true, Message: "Can not get Ad", Data: nil})
+			return
+		}
+		data := result
+		c.JSON(http.StatusOK, responses.SuccessResponse{Status: http.StatusOK, Success: true, Message: "", Data: data})
+	}
+}
+
+func GetAutomobileAdsByUserId() gin.HandlerFunc {
+
+	return func(c *gin.Context) {
+		ctx := context.Background()
+		ctx = context.WithValue(ctx, userService.UserClaims{}, c.Value("user"))
+		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+
+		defer cancel()
+		result, err := automobileAdService.GetAutomobileAdsGeneralByUserId(ctx)
+		if err != nil || result == nil {
+			fmt.Println(err)
+			c.JSON(http.StatusNotFound, responses.FailedResponse{Status: http.StatusNotFound, Error: true, Message: "Can not get Ad", Data: nil})
+			return
+		}
+		data := result
+		c.JSON(http.StatusOK, responses.SuccessResponse{Status: http.StatusOK, Success: true, Message: "", Data: data})
 	}
 }

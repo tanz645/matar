@@ -25,16 +25,44 @@ func GetAutomobileAdGeneralById(ctx context.Context, id string) (*automobileAdSc
 	if err != nil {
 		return nil, err
 	}
-	err = automobileAdCollection.FindOne(ctx, bson.M{"_id": objId}).Decode(&automobileAd)
+	err = automobileAdCollection.FindOne(ctx, bson.D{{Key: "_id", Value: objId}, {Key: "active", Value: true}}).Decode(&automobileAd)
 	if err != nil {
 		return nil, err
 	}
 	return &automobileAd, nil
 }
 
-func GetAutomobileAdsGeneralByUserId(ctx context.Context, userId string) ([]automobileAdSchema.AutomobileAdGeneral, error) {
+func GetAutomobileAdGeneralByUserId(ctx context.Context, id string) (*automobileAdSchema.AutomobileAdGeneral, error) {
+	var automobileAd automobileAdSchema.AutomobileAdGeneral
+	var automobileAdCollection *mongo.Collection = clients.GetMongoCollection(clients.GetConnectedMongoClient(), automobileAdSchema.AutomobileAdCollectionName)
+	userClaims := ctx.Value(userService.UserClaims{})
+	userId := userClaims.(*userService.UserClaims).Id.Hex()
+
+	user, err := userService.GetUserById(ctx, userId)
+	if err != nil || user == nil {
+		return nil, err
+	}
+	objId, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return nil, err
+	}
+	err = automobileAdCollection.FindOne(ctx, bson.D{{Key: "_id", Value: objId}, {Key: "user_id", Value: userId}}).Decode(&automobileAd)
+	if err != nil {
+		return nil, err
+	}
+	return &automobileAd, nil
+}
+
+func GetAutomobileAdsGeneralByUserId(ctx context.Context) ([]automobileAdSchema.AutomobileAdGeneral, error) {
 	var automobileAds []automobileAdSchema.AutomobileAdGeneral
 	var automobileAdCollection *mongo.Collection = clients.GetMongoCollection(clients.GetConnectedMongoClient(), automobileAdSchema.AutomobileAdCollectionName)
+	userClaims := ctx.Value(userService.UserClaims{})
+	userId := userClaims.(*userService.UserClaims).Id.Hex()
+
+	user, err := userService.GetUserById(ctx, userId)
+	if err != nil || user == nil {
+		return nil, err
+	}
 	results, err := automobileAdCollection.Find(ctx, bson.M{"user_id": userId})
 	if err != nil {
 		return nil, err
@@ -252,7 +280,6 @@ func SearchAutomobileAdGeneral(ctx context.Context, query automobileAdSchema.Sea
 	if len(query.SortBy) > 0 && query.SortOrder >= -1 {
 		sort = bson.D{{Key: query.SortBy, Value: query.SortOrder}}
 	}
-	fmt.Println(match)
 	opts := options.Find().SetProjection(projection).SetSort(sort).SetSkip(skip).SetLimit(limit)
 	results, err := automobileAdCollection.Find(ctx, match, opts)
 	if err != nil {
@@ -272,4 +299,32 @@ func SearchAutomobileAdGeneral(ctx context.Context, query automobileAdSchema.Sea
 	listingResponse.TotalCount = uint64(totalCount)
 	listingResponse.List = automobileAds
 	return &listingResponse, nil
+}
+
+func UpdateAdActiveStatus(ctx context.Context, updateAutomobileAdActiveStatus automobileAdSchema.UpdateAutomobileAdActiveStatus, adId string) (string, error) {
+	var automobileAdCollection *mongo.Collection = clients.GetMongoCollection(clients.GetConnectedMongoClient(), automobileAdSchema.AutomobileAdCollectionName)
+	userClaims := ctx.Value(userService.UserClaims{})
+	userId := userClaims.(*userService.UserClaims).Id.Hex()
+	user, err := userService.GetUserById(ctx, userId)
+	if err != nil || user == nil {
+		return "", err
+	}
+	if user.Role != "admin" {
+		return "", errors.New("Can not update ad")
+	}
+
+	update := bson.M{
+		"active":     updateAutomobileAdActiveStatus.Active,
+		"updated_at": time.Now(),
+	}
+	objId, err := primitive.ObjectIDFromHex(adId)
+	if err != nil {
+		return "", err
+	}
+	saveAdResult, err := automobileAdCollection.UpdateOne(ctx, bson.M{"_id": objId}, bson.M{"$set": update})
+	fmt.Println(saveAdResult.ModifiedCount)
+	if err != nil {
+		return "", err
+	}
+	return adId, nil
 }

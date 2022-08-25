@@ -1,7 +1,7 @@
 package general
 
 import (
-	"matar/controllers"
+	automobileAdGeneralcontroller "matar/controllers/automobileAdController"
 	"matar/middlewares/authMiddleware"
 
 	"github.com/gin-gonic/gin"
@@ -9,9 +9,12 @@ import (
 
 func AutomobileAdRoute(routerGroup *gin.RouterGroup) {
 	automobileAds := routerGroup.Group("/automobile-ads")
-	automobileAds.POST("/", authMiddleware.VerifyUser(), controllers.CreateAutomobileAd())
-	automobileAds.GET("/", controllers.SearchAutomobileAd())
-	automobileAds.GET("/:id", controllers.GetAutomobileAdById())
-	automobileAds.DELETE("/:id", authMiddleware.VerifyUser(), controllers.DeleteAutomobileAdById())
-	automobileAds.PUT("/:id", authMiddleware.VerifyUser(), controllers.UpdateAutomobileAdById())
+	automobileAds.GET("/:id/by-vendor", authMiddleware.VerifyUser(), automobileAdGeneralcontroller.GetAutomobileAdByUserId())
+	automobileAds.GET("/by-vendor", authMiddleware.VerifyUser(), automobileAdGeneralcontroller.GetAutomobileAdsByUserId())
+	automobileAds.POST("/", authMiddleware.VerifyUser(), automobileAdGeneralcontroller.CreateAutomobileAd())
+	automobileAds.GET("/", automobileAdGeneralcontroller.SearchAutomobileAd())
+	automobileAds.GET("/:id", automobileAdGeneralcontroller.GetAutomobileAdById())
+	automobileAds.DELETE("/:id", authMiddleware.VerifyUser(), automobileAdGeneralcontroller.DeleteAutomobileAdById())
+	automobileAds.PUT("/:id", authMiddleware.VerifyUser(), automobileAdGeneralcontroller.UpdateAutomobileAdById())
+
 }
