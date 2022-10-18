@@ -120,10 +120,10 @@ func CreateUser(ctx context.Context, user userSchema.User) (*mongo.InsertOneResu
 		return nil, errors.New("Error in password hashing")
 	}
 	var maxAd int16 = 1
-	if user.Type == enum.USER_TYPE_COMPANY {
+	if user.Type == USER_TYPE_COMPANY {
 		maxAd = 30
 	}
-	if user.Type == enum.USER_TYPE_INDIVIDUAL {
+	if user.Type == USER_TYPE_INDIVIDUAL {
 		maxAd = 3
 	}
 	newUser := userSchema.User{

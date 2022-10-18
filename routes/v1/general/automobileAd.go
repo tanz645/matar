@@ -16,5 +16,6 @@ func AutomobileAdRoute(routerGroup *gin.RouterGroup) {
 	automobileAds.GET("/:id", automobileAdGeneralcontroller.GetAutomobileAdById())
 	automobileAds.DELETE("/:id", authMiddleware.VerifyUser(), automobileAdGeneralcontroller.DeleteAutomobileAdById())
 	automobileAds.PUT("/:id", authMiddleware.VerifyUser(), automobileAdGeneralcontroller.UpdateAutomobileAdById())
-
+	automobileAds.POST("/:id/upload-images", authMiddleware.VerifyUser(), automobileAdGeneralcontroller.UploadImages())
+	automobileAds.POST("/:id/delete-image", authMiddleware.VerifyUser(), automobileAdGeneralcontroller.DeleteImage())
 }

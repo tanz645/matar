@@ -176,6 +176,9 @@ type SearchAutomobileAdGeneral struct {
 type UpdateAutomobileAdActiveStatus struct {
 	Active bool `json:"active"`
 }
+type DeleteAutomobileAdImage struct {
+	Url string `json:"url" validate:"required"`
+}
 
 func CreateAutomobileAdIndexes(ctx context.Context, client *mongo.Client) {
 	col := clients.GetMongoCollection(client, AutomobileAdCollectionName)

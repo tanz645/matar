@@ -13,3 +13,8 @@ type JwtClaims struct {
 type UserClaims struct {
 	Id primitive.ObjectID `json:"id"`
 }
+
+const (
+	USER_TYPE_INDIVIDUAL string = "individual"
+	USER_TYPE_COMPANY           = "company"
+)

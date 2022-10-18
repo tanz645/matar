@@ -5,10 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"matar/clients"
+	"matar/common/enum"
 	"matar/common/responses"
 	"matar/schemas/automobileAdSchema"
+	"matar/services/mediaService"
 	"matar/services/userService"
 	"matar/utils/helper"
+	"mime/multipart"
 	"strings"
 	"time"
 
@@ -327,4 +330,94 @@ func UpdateAdActiveStatus(ctx context.Context, updateAutomobileAdActiveStatus au
 		return "", err
 	}
 	return adId, nil
+}
+
+func UploadAutomobileAdMedia(ctx context.Context, files []*multipart.FileHeader, contentId string) (string, error) {
+	var automobileAdCollection *mongo.Collection = clients.GetMongoCollection(clients.GetConnectedMongoClient(), automobileAdSchema.AutomobileAdCollectionName)
+	userClaims := ctx.Value(userService.UserClaims{})
+	userId := userClaims.(*userService.UserClaims).Id.Hex()
+	user, err := userService.GetUserById(ctx, userId)
+	if err != nil || user == nil {
+		return "", err
+	}
+	content, err := GetAutomobileAdGeneralById(ctx, contentId)
+	if err != nil || user == nil {
+		return "", err
+	}
+	if len(content.Images) >= int(enum.MAX_FILE_PER_CONTENT) {
+		return "", errors.New("Max File limit reached")
+	}
+	prefix := userId + "/" + contentId + "/"
+	validFormats := []string{"image/png", "image/jpg", "image/jpeg"}
+	metaData := map[string]*string{}
+	for _, file := range files {
+		contentType := file.Header.Get("Content-Type")
+		if !helper.Contains(validFormats, contentType) {
+			return "", errors.New("Format not supported")
+		}
+		url, uploadErr := mediaService.UploadFiles(file, "", "", prefix, metaData)
+		if uploadErr != nil {
+			return "", errors.New("Can not upload file")
+		}
+		update := bson.M{
+			"$addToSet": bson.M{"images": url},
+			"$set":      bson.M{"updated_at": time.Now()},
+		}
+		objId, err := primitive.ObjectIDFromHex(contentId)
+		if err != nil {
+			return "", err
+		}
+		saveAdResult, err := automobileAdCollection.UpdateOne(ctx, bson.M{"_id": objId}, update)
+		if err != nil {
+			return "", err
+		}
+		fmt.Println(saveAdResult.ModifiedCount)
+	}
+	return "Uploaded", nil
+}
+
+func DeleteAutomobileAdMedia(ctx context.Context, deleteAutomobileAdImage automobileAdSchema.DeleteAutomobileAdImage, contentId string) (string, error) {
+	var automobileAdCollection *mongo.Collection = clients.GetMongoCollection(clients.GetConnectedMongoClient(), automobileAdSchema.AutomobileAdCollectionName)
+	userClaims := ctx.Value(userService.UserClaims{})
+	userId := userClaims.(*userService.UserClaims).Id.Hex()
+	user, err := userService.GetUserById(ctx, userId)
+	if err != nil || user == nil {
+		return "", err
+	}
+	content, err := GetAutomobileAdGeneralById(ctx, contentId)
+	if err != nil || user == nil {
+		return "", err
+	}
+	if content == nil {
+		return "", errors.New("No content found")
+	}
+	url := ""
+	for _, v := range content.Images {
+		if v == deleteAutomobileAdImage.Url {
+			url = v
+		}
+	}
+	split := strings.Split(deleteAutomobileAdImage.Url, "/")
+	if url == "" {
+		return "", errors.New("No image found")
+	}
+	joined := strings.Join(split[3:], "/")
+	deleteErr := mediaService.DeleteFile(joined, "", "")
+	if deleteErr != nil {
+		return "", errors.New("Can not delete file")
+	}
+	update := bson.M{
+		"$pull": bson.M{"images": url},
+		"$set":  bson.M{"updated_at": time.Now()},
+	}
+	objId, err := primitive.ObjectIDFromHex(contentId)
+	if err != nil {
+		return "", err
+	}
+	saveAdResult, err := automobileAdCollection.UpdateOne(ctx, bson.M{"_id": objId}, update)
+	if err != nil {
+		return "", err
+	}
+	fmt.Println(saveAdResult.ModifiedCount)
+	return "Removed", nil
 }

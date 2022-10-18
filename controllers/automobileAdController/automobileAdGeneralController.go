@@ -177,3 +177,60 @@ func GetAutomobileAdsByUserId() gin.HandlerFunc {
 		c.JSON(http.StatusOK, responses.SuccessResponse{Status: http.StatusOK, Success: true, Message: "", Data: data})
 	}
 }
+
+func UploadImages() gin.HandlerFunc {
+
+	return func(c *gin.Context) {
+		ctx := context.Background()
+		ctx = context.WithValue(ctx, userService.UserClaims{}, c.Value("user"))
+		ctx, cancel := context.WithTimeout(ctx, 100*time.Second)
+		id := c.Param("id")
+		form, _ := c.MultipartForm()
+		files := form.File["file"]
+		defer cancel()
+		if len(files) == 0 || files == nil {
+			c.JSON(http.StatusUnprocessableEntity, responses.FailedResponse{Status: http.StatusUnprocessableEntity, Error: true, Message: "No Image provided", Data: nil})
+			return
+		}
+		if len(files) > 1 {
+			c.JSON(http.StatusUnprocessableEntity, responses.FailedResponse{Status: http.StatusUnprocessableEntity, Error: true, Message: "Max 1 Image can be uploaded per request", Data: nil})
+			return
+		}
+		result, err := automobileAdService.UploadAutomobileAdMedia(ctx, files, id)
+		if err != nil || result == "" {
+			fmt.Println(err)
+			c.JSON(http.StatusInternalServerError, responses.FailedResponse{Status: http.StatusInternalServerError, Error: true, Message: "Image can not be uploaded", Data: nil})
+			return
+		}
+		c.JSON(http.StatusOK, responses.SuccessResponse{Status: http.StatusOK, Success: true, Message: "Image uploaded", Data: nil})
+	}
+}
+
+func DeleteImage() gin.HandlerFunc {
+
+	return func(c *gin.Context) {
+		ctx := context.Background()
+		ctx = context.WithValue(ctx, userService.UserClaims{}, c.Value("user"))
+		ctx, cancel := context.WithTimeout(ctx, 100*time.Second)
+		id := c.Param("id")
+		defer cancel()
+
+		var deleteAutomobileAdImage automobileAdSchema.DeleteAutomobileAdImage
+		defer cancel()
+		if err := c.BindJSON(&deleteAutomobileAdImage); err != nil {
+			c.JSON(http.StatusBadRequest, responses.FailedResponse{Status: http.StatusBadRequest, Error: true, Message: "Image can not be deleted", Data: err.Error()})
+			return
+		}
+		if validationErr := controllers.Validate.Struct(&deleteAutomobileAdImage); validationErr != nil {
+			c.JSON(http.StatusUnprocessableEntity, responses.FailedResponse{Status: http.StatusUnprocessableEntity, Error: true, Message: "Image can not be deleted", Data: validationErr.Error()})
+			return
+		}
+		result, err := automobileAdService.DeleteAutomobileAdMedia(ctx, deleteAutomobileAdImage, id)
+		if err != nil || result == "" {
+			fmt.Println(err)
+			c.JSON(http.StatusInternalServerError, responses.FailedResponse{Status: http.StatusInternalServerError, Error: true, Message: "Image can not be deleted", Data: nil})
+			return
+		}
+		c.JSON(http.StatusOK, responses.SuccessResponse{Status: http.StatusOK, Success: true, Message: "Image deleted", Data: nil})
+	}
+}

@@ -1,7 +1,9 @@
 package enum
 
 const (
-	UPDATED_BY_SYSTEM    string = "system"
-	USER_TYPE_INDIVIDUAL        = "individual"
-	USER_TYPE_COMPANY           = "company"
+	UPDATED_BY_SYSTEM string = "system"
+)
+
+const (
+	MAX_FILE_PER_CONTENT int16 = 10
 )
